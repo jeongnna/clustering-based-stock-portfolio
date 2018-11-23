@@ -1,8 +1,6 @@
 library(clValid)
 
 
-# ---- Functions ----
-
 time_slice <- function(data, time_idx) {
     data %>% 
         group_by(code) %>% 
@@ -181,7 +179,12 @@ kmeans_with <- function(data, with, market, n_cluster=NULL) {
     }
 }
 
-get_cluster_index <- function(data, current_time, n_time, 
+integrate_return <- function(return, weight) {
+    weight <- weight / sum(weight)
+    log(sum(weight * exp(return)))
+}
+
+get_cluster_return <- function(data, current_time, n_time, 
                               with, market, n_cluster=NULL) {
     
     # If 'current_time' is a character value such as "2015-1", 
@@ -202,25 +205,46 @@ get_cluster_index <- function(data, current_time, n_time,
         scale_tbl(skip=1:2) %>% 
         kmeans_with(with, market, n_cluster)
     
-    x <- 
+    # x <- 
+    #     data %>% 
+    #     time_slice(time_idx) %>% 
+    #     left_join(cluster_df, by="code") %>% 
+    #     select(code, time, logret, size, cluster) %>% 
+    #     na.omit() %>% 
+    #     group_by(cluster, time) %>% 
+    #     summarize(logret = weighted.mean(logret, w=size)) %>% 
+    #     spread(key=cluster, value=logret, sep="")
+    # 
+    # y <-
+    #     data %>% 
+    #     time_slice(current_time + 1) %>% 
+    #     left_join(cluster_df, by="code") %>% 
+    #     select(code, time, logret, size, cluster) %>% 
+    #     na.omit() %>% 
+    #     group_by(cluster, time) %>% 
+    #     summarize(logret = weighted.mean(logret, w=size)) %>% 
+    #     spread(key=cluster, value=logret, sep="")
+    
+    data <-
         data %>% 
-        time_slice(time_idx) %>% 
         left_join(cluster_df, by="code") %>% 
+        select(code, time, logret, size, cluster) %>% 
+        mutate(size = lag(size)) %>% 
         select(code, time, logret, size, cluster) %>% 
         na.omit() %>% 
         group_by(cluster, time) %>% 
-        summarize(logret = weighted.mean(logret, w=size)) %>% 
+        # summarize(logret = weighted.mean(logret, w=size)) %>% 
+        summarize(logret = integrate_return(r=logret, w=size)) %>% 
         spread(key=cluster, value=logret, sep="")
     
-    y <-
-        data %>% 
-        time_slice(current_time + 1) %>% 
-        left_join(cluster_df, by="code") %>% 
-        select(code, time, logret, size, cluster) %>% 
-        na.omit() %>% 
-        group_by(cluster, time) %>% 
-        summarize(logret = weighted.mean(logret, w=size)) %>% 
-        spread(key=cluster, value=logret, sep="")
+    x <- data %>% slice(time_idx)
+    y <- data %>% slice(current_time + 1)
     
-    return (list(x=x, y=y))
+    
+    if (nrow(x) == length(time_idx) &
+        y[["time"]] == times[current_time + 1]) {
+        return (list(x=x, y=y))
+    } else {
+        stop("ERROR")
+    }
 }

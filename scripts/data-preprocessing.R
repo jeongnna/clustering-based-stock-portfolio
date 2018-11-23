@@ -65,10 +65,75 @@ nan2na <- function(data) {
     return (data)
 }
 
+preprocess <- function(file_names, var_names) {
+    
+    # Load data
+    vals <- NULL
+    for(name in file_names) {
+        file_path <- paste0("../data/", name, ".xls")
+        data <- read_excel(file_path, skip=5)[-1, -1] %>% reshape_long()
+        vals <- bind_cols(vals, data["val"])
+    }
+    colnames(vals) <- var_names
+    vals <- vals %>% nan2na()
+    
+    
+    # Create stock data frame
+    features <- 
+        vals %>% 
+        transmute(leverage = leverage,
+                  asset_growth = asset_growth,
+                  sharesturnover = trade_amount / stock_num,
+                  roa = net_profit / asset,
+                  roe = net_profit / equity,
+                  size = market_cap,
+                  pcr = pcr,
+                  per = per,
+                  equity_turnover = equity_turnover,
+                  volatility = volatility,
+                  logret = c(NA, diff(log(price))))
+    
+    stock_df <- 
+        data %>% 
+        select(code, time) %>% 
+        bind_cols(features)
+    
+    
+    # Create stock attributes table
+    stock_attr <-
+        data %>%
+        select(code, name) %>%
+        distinct()
+    
+    
+    return (list(data=stock_df, attr=stock_attr))
+}
+
+merge_time <- function(ppc1, ppc2) {
+    
+    # Merge data
+    data1 <- ppc1[["data"]]
+    data2 <- ppc2[["data"]]
+    
+    data1 <- semi_join(data1, data2, by="code")
+    data2 <- semi_join(data2, data1, by="code")
+    
+    data1 <- 
+        data1 %>% 
+        bind_rows(data2) %>% 
+        arrange(code, time)
+    
+    # Merge attr
+    attr1 <- ppc1[["attr"]]
+    attr1 <- semi_join(attr1, data2, by="code")
+    
+    return (list(data=data1, attr=attr1))
+}
+
 
 # ---- Data preprocessing ----
 
-# Load data
+# Stock data
 file_names <- c("Leverage", "NetProfit", "Equity",
                 "Asset", "AssetGrowth", "Trade_Amount",
                 "PCR", "PER", "StockPrice", "Stock_Number",
@@ -79,83 +144,25 @@ var_names <- c("leverage", "net_profit", "equity",
                "pcr", "per", "price", "stock_num",
                "market_cap", "equity_turnover", "volatility")
 
-vals <- NULL
-for(name in file_names) {
-    file_path <- paste0("../data/", name, ".xls")
-    data <- read_excel(file_path, skip=5)[-1, -1] %>% reshape_long()
-    vals <- bind_cols(vals, data["val"])
-}
-colnames(vals) <- var_names
-vals <- vals %>% nan2na()
+ppc <- preprocess(file_names, var_names)
+ppc_2018 <- preprocess(str_c("data2018/", file_names, "_2018"), var_names)
+ppc <- merge_time(ppc, ppc_2018)
+
+stock_df <- ppc[["data"]]
+stock_attr <- ppc[["attr"]]
+
+rm(list=c("ppc", "ppc_2018"))
 
 
+# KOSPI index
 kospi <- 
     read_excel("../data/KOSPI_index.xlsx", col_names=FALSE) %>% 
     setNames(c("time", "price")) %>% 
-    filter(year(time) %in% 1997:2017) %>% 
     group_by(year(time), as_quarter(month(time))) %>% 
     summarize(price = mean(price, na.rm=TRUE)) %>% 
     ungroup() %>% 
     transmute(time = str_c(.[[1]], .[[2]], sep="-"), 
               logret = c(NA, diff(log(price))))
-
-
-# Create stock attributes table
-stock_attr <-
-    data %>%
-    group_by(code, name) %>%
-    count() %>% 
-    ungroup()
-
-
-# Create stock data frame
-features <- 
-    vals %>% 
-    transmute(leverage = leverage,
-              asset_growth = asset_growth,
-              sharesturnover = trade_amount / stock_num,
-              roa = net_profit / asset,
-              roe = net_profit / equity,
-              size = market_cap,
-              pcr = pcr,
-              per = per,
-              equity_turnover = equity_turnover,
-              volatility = volatility,
-              logret = c(NA, diff(log(price))))
-
-
-# stock_df <-
-#     bind_cols(data[c("code", "time")], features)
-stock_df <- 
-    data %>% 
-    select(code, time) %>% 
-    bind_cols(features)
-
-
-# Log-transformation & Scaling
-# stock_df[["assets_rate"]] <- (stock_df[["assets_rate"]] + 100) / 100
-# log_vars <- c("leverage", "assets_rate", "turnover", "pcr", "per")
-# stock_df[log_vars] <- lapply(stock_df[log_vars], log)
-# stock_df[-(1:2)] <- scale(stock_df[-(1:2)])
-
-
-# # Create 3-dimensional stock matrix
-# #     dim[1]: each stock item
-# #     dim[2]: time
-# #     dim[3]: features
-# nstock <- nrow(stock_attr)
-# ntime <- stock_attr$n[1]
-# nvar <- ncol(stock_df) - 2
-# stock_mat <- array(dim=c(nstock, ntime, nvar))
-# 
-# for (i in 1:nstock) {
-#     wb <- 1 + (i-1) * ntime
-#     we <- wb + ntime - 1
-#     for (k in 1:nvar) {
-#         stock_mat[i, , k] <- stock_df[[k+2]][wb:we]
-#     }
-# }
-# stock_mat <- stock_mat[, -1, ]
 
 
 # Save workspace
