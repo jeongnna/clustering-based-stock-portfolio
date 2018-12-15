@@ -1,7 +1,8 @@
 library(tidyverse)
 library(readxl)
-source("functions-clustering.R")
-source("functions-portfolio.R")
+source("../src/data-preprocessing.R")
+source("../src/functions-clustering.R")
+source("../src/functions-portfolio.R")
 
 
 # Set random seed
