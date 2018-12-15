@@ -3,30 +3,29 @@ title: "Untitled"
 output: word_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
-library(knitr)
 load("../RData/main.RData")
 ```
 
 ```{r}
 method_mean <- function(x) {
-    n <- nrow(x)
-    y <- 
-        x %>% 
-        select(cumsum, sd, info_r) %>% 
-        as.matrix() %>% 
-        matrix(nrow = 2) %>% 
-        apply(2, mean) %>% 
-        matrix(nrow = 0.5 * n) %>% 
-        round(3) %>% 
-        as_tibble() %>% 
-        setNames(c("cumsum", "sd", "info_r"))
+  n <- nrow(x)
+  y <- 
     x %>% 
-        select(with, n_time) %>% 
-        distinct() %>% 
-        bind_cols(y)
+    select(cumsum, sd, info_r) %>% 
+    as.matrix() %>% 
+    matrix(nrow = 2) %>% 
+    apply(2, mean) %>% 
+    matrix(nrow = 0.5 * n) %>% 
+    round(3) %>% 
+    as_tibble() %>% 
+    setNames(c("cumsum", "sd", "info_r"))
+  x %>% 
+    select(with, n_time) %>% 
+    distinct() %>% 
+    bind_cols(y)
 }
 
 
@@ -34,28 +33,28 @@ n <- nrow(train_result_list[[1]]$summary)
 summ_mat <- matrix(0, nrow = n, ncol = 3)
 
 for (i in seq_along(train_result_list)) {
-    summ_mat <- summ_mat + 
-        train_result_list[[i]]$summary %>% 
-        select(cumsum, sd, info_r) %>% 
-        as.matrix()
+  summ_mat <- summ_mat + 
+    train_result_list[[i]]$summary %>% 
+    select(cumsum, sd, info_r) %>% 
+    as.matrix()
 }
 
 summ_mat <- 
-    (summ_mat / length(train_result_list)) %>% 
-    as_tibble() %>% 
-    setNames(c("cumsum", "sd", "info_r"))
+  (summ_mat / length(train_result_list)) %>% 
+  as_tibble() %>% 
+  setNames(c("cumsum", "sd", "info_r"))
 
 train_summ <- 
-    train_result_list[[1]]$summary %>% 
-    select(with, n_time, method) %>% 
-    bind_cols(summ_mat) %>% 
-    method_mean() %>% 
-    mutate(rank = min_rank(-info_r))
+  train_result_list[[1]]$summary %>% 
+  select(with, n_time, method) %>% 
+  bind_cols(summ_mat) %>% 
+  method_mean() %>% 
+  mutate(rank = min_rank(-info_r))
 
 test_summ <- 
-    test_result$summary %>% 
-    method_mean() %>% 
-    mutate(rank = min_rank(-info_r))
+  test_result$summary %>% 
+  method_mean() %>% 
+  mutate(rank = min_rank(-info_r))
 ```
 
 ```{r}
@@ -63,67 +62,65 @@ n <- nrow(train_result_list[[1]]$return)
 ret_mat <- matrix(0, nrow = n, ncol = 3)
 
 for (i in seq_along(train_result_list)) {
-    ret_mat <- ret_mat +
-        train_result_list[[i]]$return %>% 
-        select(kospi, factors_8_GMV, factors_8_Tangency) %>% 
-        as.matrix()
+  ret_mat <- ret_mat +
+    train_result_list[[i]]$return %>% 
+    select(kospi, factors_8_GMV, factors_8_Tangency) %>% 
+    as.matrix()
 }
 
 ret_mat <- 
-    (ret_mat / length(train_result_list)) %>% 
-    apply(2, cumsum) %>% 
-    as_tibble() %>% 
-    setNames(c("kospi", "GMV", "Tangency"))
+  (ret_mat / length(train_result_list)) %>% 
+  apply(2, cumsum) %>% 
+  as_tibble() %>% 
+  setNames(c("kospi", "GMV", "Tangency"))
 
 train_ret <- 
-    tibble(time = str_c("Q", 1:n)) %>% 
-    mutate(time = factor(time, levels=time)) %>% 
-    bind_cols(ret_mat)
+  tibble(time = str_c("Q", 1:n)) %>% 
+  mutate(time = factor(time, levels=time)) %>% 
+  bind_cols(ret_mat)
 
 test_ret <- 
-    test_result$return %>% 
-    select(time, kospi, factors_8_GMV, factors_8_Tangency) %>% 
-    setNames(c("time", "kospi", "GMV", "Tangency"))
+  test_result$return %>% 
+  select(time, kospi, factors_8_GMV, factors_8_Tangency) %>% 
+  setNames(c("time", "kospi", "GMV", "Tangency"))
 test_ret[2:4] <- lapply(test_ret[2:4], cumsum)
 
 train_cumret_plot <- 
-    train_ret %>% 
-    gather(key=asset, value=logret, 2:4) %>% 
-    # mutate(asset = relevel(factor(asset), ref="kospi")) %>% 
-    mutate(asset = factor(asset, levels=c("Tangency", "GMV", "kospi"))) %>% 
-    ggplot(aes(x=time, y=logret, group=asset, col=asset)) +
-    geom_hline(yintercept=0, lty=2) +
-    geom_point() +
-    geom_line() +
-    scale_color_discrete(name=NULL, labels=c("Tangency", "GMV", "KOSPI")) +
-    xlab("Time") + ylab("Cumulative log return") +
-    theme_bw()
+  train_ret %>% 
+  gather(key = asset, value = logret, 2:4) %>% 
+  mutate(asset  =  factor(asset, levels = c("Tangency", "GMV", "kospi"))) %>% 
+  ggplot(aes(x = time, y = logret, group = asset, col = asset)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_point() +
+  geom_line() +
+  scale_color_discrete(name = NULL, labels = c("Tangency", "GMV", "KOSPI")) +
+  xlab("Time") + ylab("Cumulative log return") +
+  theme_bw()
 
 test_cumret_plot <- 
-    test_ret %>% 
-    gather(key=asset, value=logret, 2:4) %>% 
-    # mutate(asset = relevel(factor(asset), ref="kospi")) %>% 
-    mutate(asset = factor(asset, levels=c("Tangency", "GMV", "kospi"))) %>% 
-    ggplot(aes(x=time, y=logret, group=asset, col=asset)) +
-    geom_hline(yintercept=0, lty=2) +
-    geom_point() +
-    geom_line() +
-    scale_color_discrete(name=NULL, labels=c("Tangency", "GMV", "KOSPI")) +
-    xlab("Time") + ylab("Cumulative log return") +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle=90, vjust=.5))
+  test_ret %>% 
+  gather(key = asset, value = logret, 2:4) %>% 
+  mutate(asset = factor(asset, levels = c("Tangency", "GMV", "kospi"))) %>% 
+  ggplot(aes(x = time, y = logret, group = asset, col = asset)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_point() +
+  geom_line() +
+  scale_color_discrete(name = NULL, labels = c("Tangency", "GMV", "KOSPI")) +
+  xlab("Time") + ylab("Cumulative log return") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = .5))
 ```
 
 ## In-sample
 
 ```{r}
-kable(train_summ)
+knitr::kable(train_summ)
 train_cumret_plot
 ```
 
 ## Out-sample
 
 ```{r}
-kable(test_summ)
+knitr::kable(test_summ)
 test_cumret_plot
 ```
