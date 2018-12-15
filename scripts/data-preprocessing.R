@@ -3,84 +3,122 @@ library(readxl)
 library(lubridate)
 
 
-# ---- Functions ----
+# Functions ---------------------------------------------------------------
 
 as_quarter <- function(x) {
-    # This function converts 'month' to 'quarter'.
-    # For example, (1, 2, 3, 4, 5, 6) -> (1, 1, 1, 2, 2, 2)
-    
+    # 월(month) 값을 분기(quarter) 값으로 전환한다.
+    # Example: (1, 2, 3, 4, 5, 6) -> (1, 1, 1, 2, 2, 2)
+    #
+    # Args:
+    #   x: 1 ~ 12 사이의 integer vector
+    #
+    # Returns:
+    #   월 -> 분기로 전환된 integer vector
+
     x <- as.numeric(x)
-    
+
+    # 1 ~ 12 사이의 integer vector가 아닐 경우 stop
     if (!all(x %in% 1:12)) {
         stop("range of months exceeds [1, 12].")
     }
-    
-    return ((x - 1) %/% 3 + 1)
+
+    (x - 1) %/% 3 + 1
 }
 
 is_quarter_interval <- function(x) {
-    return (length(grep("/", x)) > 0)
+    # 시간 변수가
+    # 날짜 형식(ex: "20010131")인지 혹은
+    # 분기 형식(ex: "2001/1 Quarter)인지 검사한다.
+    #
+    # Args:
+    #   x: charactor vector
+    #
+    # Returns:
+    #   날짜 형식이면 FALSE, 분기 형식이면 TRUE
+
+    length(grep("/", x)) > 0
 }
 
 reshape_long <- function(data) {
+    # Short form 데이터를 long form 데이터로 전환한다.
+    # 시간 변수가 날짜 형식인 경우 분기 형식으로 전환한다.
+    #
+    # Args:
+    #   data: raw data를 불러들인 data frame
+    #
+    # Returns:
+    #   long form으로 전환된 data frame
+
     colnames(data)[1:2] <- c("code", "name")
     data <- data %>% gather("time", "val", -(1:2))
     data[["val"]] <- as.numeric(data[["val"]])
 
     if (is_quarter_interval(data$time[1])) {
-        data <- data %>% separate(time, into=c("year", "quarter"))
-        
+        data <- data %>% separate(time, into = c("year", "quarter"))
+
         data[["quarter"]] <-
             data[["quarter"]] %>%
             plyr::revalue(c("Semi" = 2,
-                            "Annual" = 4)) %>% 
+                            "Annual" = 4)) %>%
             as.numeric()
 
         data <- data %>% arrange(code, year, quarter)
-        
+
     } else {
-        data[["time"]] <- data[["time"]] %>% as.Date(format="%Y%m%d")
+        data[["time"]] <- data[["time"]] %>% as.Date(format = "%Y%m%d")
 
         data <-
             data %>%
             group_by(code, name,
-                     year=year(time),
-                     quarter=as_quarter(month(time))) %>%
-            summarize(val=mean(val, na.rm=TRUE)) %>% 
+                     year = year(time),
+                     quarter = as_quarter(month(time))) %>%
+            summarize(val = mean(val, na.rm = TRUE)) %>%
             ungroup()
     }
-    
-    data <- data %>% unite("time", "year", "quarter", sep="-")
-    col_order <- c("code", "name", "time", "val")
-    data <- data[col_order]
 
-    return (data)
+    data <- data %>% unite("time", "year", "quarter", sep = "-")
+    col_order <- c("code", "name", "time", "val")
+    data[col_order]
 }
 
 nan2na <- function(data) {
+    # 데이터의 NaN인 부분을 NA로 전환한다.
+    #
+    # Args:
+    #   data frame
+    #
+    # Returns:
+    #   NaN이 NA로 전환된 data frame
+
     for (i in 1:ncol(data)) {
         data[[i]][is.nan(data[[i]])] <- NA
     }
-    
-    return (data)
+    data
 }
 
-preprocess <- function(file_names, var_names) {
-    
-    # Load data
+preprocess <- function(path, file_names, var_names, extention = ".xls") {
+    # Args:
+    #   path: 데이터 경로
+    #   file_names: 불러올 데이터 파일 이름
+    #   var_names: 각 데이터에 지정할 변수명
+    #   extention: 불러올 데이터 파일 형식
+    #
+    # Returns:
+    #   전처리 완료된 데이터
+
+    # 데이터를 불러오고 long form으로 전환 후 변수 값들만 모은다.
     vals <- NULL
     for(name in file_names) {
-        file_path <- paste0("../data/", name, ".xls")
-        data <- read_excel(file_path, skip=5)[-1, -1] %>% reshape_long()
+        file_path <- paste0(path, name, extention)
+        data <- read_excel(file_path, skip = 5)[-1, -1] %>% reshape_long()
         vals <- bind_cols(vals, data["val"])
     }
     colnames(vals) <- var_names
-    vals <- vals %>% nan2na()
-    
-    
-    # Create stock data frame
-    features <- 
-        vals %>% 
+    vals <- vals %>% nan2na()  # NaN을 NA로 전환
+
+    # 특징값을 만들어내고 분석에 사용할 데이터를 생성한다.
+    features <-
+        vals %>%
         transmute(leverage = leverage,
                   asset_growth = asset_growth,
                   sharesturnover = trade_amount / stock_num,
@@ -92,46 +130,43 @@ preprocess <- function(file_names, var_names) {
                   equity_turnover = equity_turnover,
                   volatility = volatility,
                   logret = c(NA, diff(log(price))))
-    
-    stock_df <- 
-        data %>% 
-        select(code, time) %>% 
+    stock_df <-
+        data %>%
+        select(code, time) %>%
         bind_cols(features)
-    
-    
+
     # Create stock attributes table
     stock_attr <-
         data %>%
         select(code, name) %>%
         distinct()
-    
-    
-    return (list(data=stock_df, attr=stock_attr))
+
+    list(data = stock_df, attr = stock_attr)
 }
 
 merge_time <- function(ppc1, ppc2) {
-    
+
     # Merge data
     data1 <- ppc1[["data"]]
     data2 <- ppc2[["data"]]
-    
-    data1 <- semi_join(data1, data2, by="code")
-    data2 <- semi_join(data2, data1, by="code")
-    
-    data1 <- 
-        data1 %>% 
-        bind_rows(data2) %>% 
+
+    data1 <- semi_join(data1, data2, by = "code")
+    data2 <- semi_join(data2, data1, by = "code")
+
+    data1 <-
+        data1 %>%
+        bind_rows(data2) %>%
         arrange(code, time)
-    
+
     # Merge attr
     attr1 <- ppc1[["attr"]]
-    attr1 <- semi_join(attr1, data2, by="code")
-    
-    return (list(data=data1, attr=attr1))
+    attr1 <- semi_join(attr1, data2, by = "code")
+
+    return (list(data = data1, attr = attr1))
 }
 
 
-# ---- Data preprocessing ----
+# Data preprocessing ------------------------------------------------------
 
 # Stock data
 file_names <- c("Leverage", "NetProfit", "Equity",
@@ -144,26 +179,39 @@ var_names <- c("leverage", "net_profit", "equity",
                "pcr", "per", "price", "stock_num",
                "market_cap", "equity_turnover", "volatility")
 
-ppc <- preprocess(file_names, var_names)
-ppc_2018 <- preprocess(str_c("data2018/", file_names, "_2018"), var_names)
+ppc <- preprocess("../data/raw/", file_names, var_names)
+ppc_2018 <- preprocess("../data/raw/data2018/", str_c(file_names, "_2018"), var_names)
 ppc <- merge_time(ppc, ppc_2018)
 
 stock_df <- ppc[["data"]]
 stock_attr <- ppc[["attr"]]
 
-rm(list=c("ppc", "ppc_2018"))
+rm(list = c("ppc", "ppc_2018"))
 
 
 # KOSPI index
-kospi <- 
-    read_excel("../data/KOSPI_index.xlsx", col_names=FALSE) %>% 
-    setNames(c("time", "price")) %>% 
-    group_by(year(time), as_quarter(month(time))) %>% 
-    summarize(price = mean(price, na.rm=TRUE)) %>% 
-    ungroup() %>% 
-    transmute(time = str_c(.[[1]], .[[2]], sep="-"), 
+kospi <-
+    read_excel("../data/raw/KOSPI_index.xlsx", col_names = FALSE) %>%
+    setNames(c("time", "price")) %>%
+    group_by(year(time), as_quarter(month(time))) %>%
+    summarize(price = mean(price, na.rm = TRUE)) %>%
+    ungroup() %>%
+    transmute(time = str_c(.[[1]], .[[2]], sep = "-"),
               logret = c(NA, diff(log(price))))
 
 
-# Save workspace
-save.image(file="../RData/data_preprocessing.RData")
+# Risk-free rate
+risk_free <-
+    read_excel("../data/raw/CD_RiskFree.xlsx") %>%
+    setNames(c("time", "r")) %>%
+    mutate(r = log(1 + r/100),
+           time = time %>%
+               str_extract("[:digit:]+/[:digit:]") %>%
+               str_replace("/", "-"))
+
+
+# Save processed data
+# save.image(file = "../RData/data_preprocessing.RData")
+write.csv(stock_df, "../data/processed/stock_df.csv", row.names=FALSE)
+write.csv(kospi, "../data/processed/kospi.csv", row.names=FALSE)
+write.csv(risk_free, "../data/processed/risk_free.csv", row.names=FALSE)
