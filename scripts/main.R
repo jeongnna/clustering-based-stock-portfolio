@@ -1,23 +1,50 @@
-rm(list=ls())
-source("data-preprocessing.R")
-source("clustering.R")
-source("portfolio.R")
+library(tidyverse)
+library(readxl)
+source("functions-clustering.R")
+source("functions-portfolio.R")
 
 
+# Set random seed
 set.seed(123)
 
-data <- stock_df
-start <- "2001-1"
-end <- "2014-4"
-n_time <- 8
-with <- "return" # "return", "market_residual", "factors" or "factors_residual"
-market <- kospi # Market return data
-nnw <- TRUE
 
-get_portfolio_return(data, start, end, n_time, with, market, nnw)
+# Read data
+stock_df <- read_csv("../data/processed/stock_df.csv")
+kospi <- read_csv("../data/processed/kospi.csv")
+risk_free <- read_csv("../data/processed/risk_free.csv")
 
 
+# Training
+start_list <- str_c(c("2002", "2005", "2008", "2011"), "-4")
+end_list <- str_c(c("2005", "2008", "2011", "2014"), "-3")
+
+with_setlist <- c("return", "market_residual", "factors", "factors_residual")
+n_time_setlist <- c(6, 8, 10, 12)
+method_setlist <- c("GMV", "Tangency")
+
+train_result_list <- list()
+for (i in 1:4) {
+    start <- start_list[i]
+    end <- end_list[i]
+    train_result_list[[i]] <-
+        evaluate_portfolio(stock_df, kospi, risk_free,
+                           start, end,
+                           with_setlist, n_time_setlist, method_setlist)
+}
 
 
-# dir.create("../RData")
-# save.image(file="../RData/main.RData")
+# Test
+start <- "2014-4"
+end <- "2017-3"
+
+with_setlist <- c("return", "market_residual", "factors", "factors_residual")
+n_time_setlist <- c(6, 8, 10, 12)
+method_setlist <- c("GMV", "Tangency")
+
+test_result <- evaluate_portfolio(stock_df, kospi, risk_free,
+                           start, end,
+                           with_setlist, n_time_setlist, method_setlist)
+
+
+# Save workspace
+save.image(file = "../RData/main.RData")
