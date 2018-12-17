@@ -5,8 +5,13 @@ output: word_document
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include = FALSE}
 library(tidyverse)
-load("../RData/main.RData")
+load("../model/insamp_res_list.RData")
+load("../model/outsamp_res_list.RData")
+kospi <- read_csv("../data/processed/kospi.csv")
 ```
 
 ```{r}
@@ -29,64 +34,64 @@ method_mean <- function(x) {
 }
 
 
-n <- nrow(train_result_list[[1]]$summary)
+n <- nrow(insamp_res_list[[1]]$summary)
 summ_mat <- matrix(0, nrow = n, ncol = 3)
 
-for (i in seq_along(train_result_list)) {
+for (i in seq_along(insamp_res_list)) {
   summ_mat <- summ_mat + 
-    train_result_list[[i]]$summary %>% 
+    insamp_res_list[[i]]$summary %>% 
     select(cumsum, sd, info_r) %>% 
     as.matrix()
 }
 
 summ_mat <- 
-  (summ_mat / length(train_result_list)) %>% 
+  (summ_mat / length(insamp_res_list)) %>% 
   as_tibble() %>% 
   setNames(c("cumsum", "sd", "info_r"))
 
-train_summ <- 
-  train_result_list[[1]]$summary %>% 
+insamp_summ <- 
+  insamp_res_list[[1]]$summary %>% 
   select(with, n_time, method) %>% 
   bind_cols(summ_mat) %>% 
   method_mean() %>% 
   mutate(rank = min_rank(-info_r))
 
-test_summ <- 
-  test_result$summary %>% 
+outsamp_summ <- 
+  outsamp_res$summary %>% 
   method_mean() %>% 
   mutate(rank = min_rank(-info_r))
 ```
 
 ```{r}
-n <- nrow(train_result_list[[1]]$return)
+n <- nrow(insamp_res_list[[1]]$return)
 ret_mat <- matrix(0, nrow = n, ncol = 3)
 
-for (i in seq_along(train_result_list)) {
+for (i in seq_along(insamp_res_list)) {
   ret_mat <- ret_mat +
-    train_result_list[[i]]$return %>% 
+    insamp_res_list[[i]]$return %>% 
     select(kospi, factors_8_GMV, factors_8_Tangency) %>% 
     as.matrix()
 }
 
 ret_mat <- 
-  (ret_mat / length(train_result_list)) %>% 
+  (ret_mat / length(insamp_res_list)) %>% 
   apply(2, cumsum) %>% 
   as_tibble() %>% 
   setNames(c("kospi", "GMV", "Tangency"))
 
-train_ret <- 
+insamp_ret <- 
   tibble(time = str_c("Q", 1:n)) %>% 
   mutate(time = factor(time, levels=time)) %>% 
   bind_cols(ret_mat)
 
-test_ret <- 
-  test_result$return %>% 
+outsamp_ret <- 
+  outsamp_res$return %>% 
   select(time, kospi, factors_8_GMV, factors_8_Tangency) %>% 
   setNames(c("time", "kospi", "GMV", "Tangency"))
-test_ret[2:4] <- lapply(test_ret[2:4], cumsum)
+outsamp_ret[2:4] <- lapply(outsamp_ret[2:4], cumsum)
 
-train_cumret_plot <- 
-  train_ret %>% 
+insamp_cumret_plot <- 
+  insamp_ret %>% 
   gather(key = asset, value = logret, 2:4) %>% 
   mutate(asset  =  factor(asset, levels = c("Tangency", "GMV", "kospi"))) %>% 
   ggplot(aes(x = time, y = logret, group = asset, col = asset)) +
@@ -97,8 +102,8 @@ train_cumret_plot <-
   xlab("Time") + ylab("Cumulative log return") +
   theme_bw()
 
-test_cumret_plot <- 
-  test_ret %>% 
+outsamp_cumret_plot <- 
+  outsamp_ret %>% 
   gather(key = asset, value = logret, 2:4) %>% 
   mutate(asset = factor(asset, levels = c("Tangency", "GMV", "kospi"))) %>% 
   ggplot(aes(x = time, y = logret, group = asset, col = asset)) +
@@ -114,13 +119,13 @@ test_cumret_plot <-
 ## In-sample
 
 ```{r}
-knitr::kable(train_summ)
-train_cumret_plot
+knitr::kable(insamp_summ)
+insamp_cumret_plot
 ```
 
 ## Out-sample
 
 ```{r}
-knitr::kable(test_summ)
-test_cumret_plot
+knitr::kable(outsamp_summ)
+outsamp_cumret_plot
 ```

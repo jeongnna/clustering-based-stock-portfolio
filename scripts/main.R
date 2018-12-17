@@ -1,6 +1,5 @@
 library(tidyverse)
 library(readxl)
-source("../src/data-preprocessing.R")
 source("../src/functions-clustering.R")
 source("../src/functions-portfolio.R")
 
@@ -18,23 +17,25 @@ with_list <- c("return", "market_residual", "factors", "factors_residual")
 n_time_list <- c(6, 8, 10, 12)
 method_list <- c("GMV", "Tangency")
 
-# Training
+# In-sample
 start_list <- str_c(c("2002", "2005", "2008", "2011"), "-4")
 end_list <- str_c(c("2005", "2008", "2011", "2014"), "-3")
-train_result_list <- list()
+train_res_list <- list()
 for (i in 1:4) {
   start <- start_list[i]
   end <- end_list[i]
-  train_result_list[[i]] <-
+  insamp_res_list[[i]] <-
     evaluate_portfolio(stock_df, kospi, risk_free, start, end,
                        with_list, n_time_list, method_list)
 }
 
-# Test
+# Out-sample
 start <- "2014-4"
 end <- "2017-3"
-test_result <- evaluate_portfolio(stock_df, kospi, risk_free, start, end,
+outsamp_res <- evaluate_portfolio(stock_df, kospi, risk_free, start, end,
                                   with_list, n_time_list, method_list)
 
-# Save workspace
-save.image(file = "../RData/main.RData")
+# Save results
+dir.create("../model")
+save(insamp_res_list, file = "../model/insamp_res_list.RData")
+save(ousamp_res, file = "../model/outsamp_res.RData")
