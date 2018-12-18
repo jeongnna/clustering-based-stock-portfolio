@@ -211,7 +211,6 @@ risk_free <-
 
 
 # Save processed data
-# save.image(file = "../RData/data_preprocessing.RData")
 write.csv(stock_df, "../data/processed/stock_df.csv", row.names=FALSE)
 write.csv(kospi, "../data/processed/kospi.csv", row.names=FALSE)
 write.csv(risk_free, "../data/processed/risk_free.csv", row.names=FALSE)
