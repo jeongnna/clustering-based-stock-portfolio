@@ -10,22 +10,22 @@ time_slice <- function(data, time_idx) {
 
 time_expand <- function(data, skip = 1:2) {
   # 그냥 spread 쓰면 안 돼?
-
+  
   cols <- setdiff(1:ncol(data), skip)
-
+  
   while (length(unique(data[["time"]])) > 1) {
     lagged <-
       apply(data[cols], 2, lag) %>%
       as_tibble() %>%
       setNames(str_c("x", cols))  # Dummy names
     data <- bind_cols(data, lagged)
-
+    
     data <-
       data %>%
       group_by(code) %>%
       slice(-1) %>%
       ungroup()
-
+    
     cols <- cols + length(cols)
   }
   data
@@ -40,7 +40,7 @@ scale_tbl <- function(data, skip = 1:2) {
   #
   # Returns:
   #   표준화된 data frame
-
+  
   vals <- data[-skip]
   for (i in 1:ncol(vals)) {
     vals[[i]] <- scale(vals[[i]])
@@ -58,20 +58,20 @@ PCA <- function(data, skip = 1:2, threshold = 0.8) {
   #
   # Returns:
   #   변수들이 주성분으로 대체된 data frame
-
+  
   prfit <-
     data %>%
     select(-skip) %>%
     na.omit() %>%
     prcomp()
-
+  
   pve <- prfit$sdev^2 %>% (function(x) {x / sum(x)})  # 각 주성분이 차지하는 변동 비율
   n_pc <- which(cumsum(pve) > threshold)[1]  # 사용할 주성분 개수
-
+  
   x_origin <- as.matrix(data[-skip])  # 기존 변수 행렬
   loading <- prfit$rotation[, 1:n_pc]  # 주성분 로딩 벡터
   x_pc <- x_origin %*% loading  # 주성분 행렬
-
+  
   bind_cols(data[1:2], as_tibble(x_pc))
 }
 
@@ -79,22 +79,24 @@ add_factors_residual <- function(data, risk_free) {
   risk_free <-
     risk_free %>%
     filter(time %in% unique(data[["time"]]))
-
+  
   data <-
     data %>%
     group_by(code) %>%
-    mutate(logret = lead(logret),
-           rf = lead(risk_free[["r"]])) %>%
+    mutate(
+      logret = lead(logret),
+      rf = lead(risk_free[["r"]])
+    ) %>%
     ungroup()
-
+  
   y <- data[["logret"]] - data[["rf"]]
   x <- data %>% select(-logret, -rf) %>% PCA()
-
+  
   lmfit <- lm(y ~ ., data = x[-(1:2)])
   yhat <- predict(lmfit, newdata = x[-(1:2)])
   res <- y - yhat
   data[["factors_res"]] <- scale(res)
-
+  
   n_time <- length(unique(data[["time"]]))
   data %>%
     group_by(code) %>%
@@ -106,25 +108,29 @@ add_market_residual <- function(data, market, risk_free) {
   market <-
     market %>%
     filter(time %in% unique(data[["time"]]))
-
+  
   risk_free <-
     risk_free %>%
     filter(time %in% unique(data[["time"]]))
-
+  
   data <-
     data %>%
     group_by(code) %>%
-    mutate(mk = market[["logret"]],
-           rf = risk_free[["r"]]) %>%
-    mutate(y = logret - rf,
-           x = mk - rf) %>%
+    mutate(
+      mk = market[["logret"]],
+      rf = risk_free[["r"]]
+    ) %>%
+    mutate(
+      y = logret - rf,
+      x = mk - rf
+    ) %>%
     ungroup()
-
+  
   lmfit <- lm(y ~ x, data = data)
   yhat <- predict(lmfit, newdata = data["x"])
   res <- data[["y"]] - yhat
   data[["market_res"]] <- scale(res)
-
+  
   data
 }
 
@@ -135,12 +141,12 @@ kmeanspp <- function(x, k, iter_max = 100, nstart = 100,
   centers <- integer(k)
   centers[1] <- sample(1:n, 1)
   L2_mat <- as.matrix(dist(x))^2
-
+  
   for (i in 2:k) {
     weight <- apply(as.matrix(L2_mat[, centers]), 1, min)
     centers[i] <- sample(1:n, 1, prob = weight)
   }
-
+  
   kmeans(x, x[centers, ], iter_max, nstart, algorithm, trace)
 }
 
@@ -148,7 +154,7 @@ get_kmeans_tbl <- function(data, ncmin = 2, ncmax = 5) {
   data <-
     data %>%
     na.omit()
-
+  
   ncs <- ncmin:ncmax
   dunns <- numeric(length(ncs))
   kmfit_list <- list()
@@ -161,15 +167,15 @@ get_kmeans_tbl <- function(data, ncmin = 2, ncmax = 5) {
     kmfit_list <- append(kmfit_list, list(kmfit))
     dunns[i] <- dunn(Data = data, clusters = kmfit$cluster)
   }
-
+  
   kmfit_best <- kmfit_list[[which.max(dunns)]]
-
+  
   cluster_tbl <-
     data %>%
     select(code) %>%
     distinct() %>%
     mutate(cluster = kmfit_best$cluster)
-
+  
   return (cluster_tbl)
 }
 
@@ -179,33 +185,33 @@ kmeans_with <- function(data, with, market, risk_free) {
       data %>%
       select(1:2, logret) %>%
       time_expand()
-
+    
   } else if (with == "market_residual") {
     data <-
       data %>%
       add_market_residual(market, risk_free) %>%
       select(1:2, market_res) %>%
       time_expand()
-
+    
   } else if (with == "factors") {
     data <-
       data %>%
       select(-logret) %>%
       PCA() %>%
       time_expand()
-
+    
   } else if (with == "factors_residual") {
     data <-
       data %>%
       add_factors_residual(risk_free) %>%
       select(1:2, factors_res) %>%
       time_expand()
-
+    
   } else {
     stop("ERROR: argument 'with' must be one of
              ('return', 'market_residual', 'factors', 'factors_residual')")
   }
-
+  
   get_kmeans_tbl(data)
 }
 
@@ -220,8 +226,7 @@ get_cluster_return <- function(data, time_idx, with, market, risk_free) {
     time_slice(time_idx) %>%
     scale_tbl() %>%
     kmeans_with(with, market, risk_free)
-
-
+  
   data <-
     data %>%
     left_join(cluster_df, by = "code") %>%
@@ -232,11 +237,10 @@ get_cluster_return <- function(data, time_idx, with, market, risk_free) {
     group_by(cluster, time) %>%
     summarize(logret = integrate_return(r = logret, w = size)) %>%
     spread(key = cluster, value = logret, sep = "")
-
+  
   x <- data %>% slice(time_idx)
   y <- data %>% slice(last(time_idx) + 1)
-
-
+  
   if (nrow(x) == length(time_idx) &
       y[["time"]] == unique(data[["time"]])[last(time_idx) + 1]) {
     return (list(x = x, y = y))
