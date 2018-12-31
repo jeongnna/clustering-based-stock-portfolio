@@ -1,7 +1,7 @@
 library(tidyverse)
 
-load("../model/insamp_res_list.RData")
-load("../model/outsamp_res.RData")
+load("../model/valid_res_list.RData")
+load("../model/test_res.RData")
 
 kospi <- read_csv("../data/processed/kospi.csv")
 
@@ -27,7 +27,7 @@ summarize_sd <- function(x) {
 sd_summ <- NULL
 for (i in 1:4) {
   newline <-
-    insamp_res_list[[i]]$return %>%
+    valid_res_list[[i]]$return %>%
     select_model() %>%
     summarize_sd() %>%
     as.matrix()
@@ -42,7 +42,7 @@ write.csv(sd_summ, "../tmp/sd_summ.csv", row.names = TRUE)
 
 ##
 
-outsamp_res$return %>%
+test_res$return %>%
   select_model() %>%
   summarize_sd() %>%
   as.matrix()
@@ -68,31 +68,31 @@ method_avg <- function(x) {
 }
 
 
-n <- nrow(insamp_res_list[[1]]$summary)
+n <- nrow(valid_res_list[[1]]$summary)
 summ_mat <- matrix(0, nrow = n, ncol = 3)
 
-for (i in seq_along(insamp_res_list)) {
+for (i in seq_along(valid_res_list)) {
   summ_mat <-
     summ_mat +
-    insamp_res_list[[i]]$summary %>%
+    valid_res_list[[i]]$summary %>%
     select(cumsum, sd, info_r) %>%
     as.matrix()
 }
 
 summ_mat <-
-  (summ_mat / length(insamp_res_list)) %>%
+  (summ_mat / length(valid_res_list)) %>%
   as_tibble() %>%
   setNames(c("cumsum", "sd", "info_r"))
 
-insamp_summ <-
-  insamp_res_list[[1]]$summary %>%
+valid_summ <-
+  valid_res_list[[1]]$summary %>%
   select(with, n_time, method) %>%
   bind_cols(summ_mat) %>%
   method_avg() %>%
   mutate(rank = min_rank(-info_r))
 
-outsamp_summ <-
-  outsamp_res$summary %>%
+test_summ <-
+  test_res$summary %>%
   method_avg() %>%
   mutate(rank = min_rank(-info_r))
 
@@ -117,47 +117,47 @@ cumret_plot <- function(x) {
     theme(axis.text.x = element_text(angle = 90, vjust = .5))
 }
 
-insamp_cumret_total_plot <-
+valid_cumret_total_plot <-
   bind_rows(
-    insamp_res_list[[1]]$return,
-    insamp_res_list[[2]]$return,
-    insamp_res_list[[3]]$return,
-    insamp_res_list[[4]]$return
+    valid_res_list[[1]]$return,
+    valid_res_list[[2]]$return,
+    valid_res_list[[3]]$return,
+    valid_res_list[[4]]$return
   ) %>%
   select_model() %>%
   cumret_plot()
 
-insamp_cumret_part_plot <- list()
+valid_cumret_part_plot <- list()
 for (i in 1:4) {
-  insamp_cumret_part_plot[[i]] <-
-    insamp_res_list[[i]]$return %>%
+  valid_cumret_part_plot[[i]] <-
+    valid_res_list[[i]]$return %>%
     select_model() %>%
     cumret_plot()
 }
 
 ggsave(
   "../tmp/in-plot_00.png",
-  insamp_cumret_total_plot,
+  valid_cumret_total_plot,
   width = 10, height = 5
 )
 ggsave(
   "../tmp/in-plot_01.png",
-  insamp_cumret_part_plot[[1]] + ylim(-0.2, 1),
+  valid_cumret_part_plot[[1]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
   "../tmp/in-plot_02.png",
-  insamp_cumret_part_plot[[2]] + ylim(-0.2, 1),
+  valid_cumret_part_plot[[2]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
   "../tmp/in-plot_03.png",
-  insamp_cumret_part_plot[[3]] + ylim(-0.2, 1),
+  valid_cumret_part_plot[[3]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
   "../tmp/in-plot_04.png",
-  insamp_cumret_part_plot[[4]] + ylim(-0.2, 1),
+  valid_cumret_part_plot[[4]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 
@@ -165,15 +165,15 @@ ggsave(
 
 # Out-sample plot ---------------------------------------------------------
 
-outsamp_ret <-
-  outsamp_res$return %>%
+test_ret <-
+  test_res$return %>%
   select(time, kospi, factors_8_GMV, factors_8_Tangency) %>%
   setNames(c("time", "kospi", "GMV", "Tangency"))
 
-outsamp_ret[2:4] <- lapply(outsamp_ret[2:4], cumsum)
+test_ret[2:4] <- lapply(test_ret[2:4], cumsum)
 
-outsamp_cumret_plot <-
-  outsamp_ret %>%
+test_cumret_plot <-
+  test_ret %>%
   gather(key = asset, value = logret, 2:4) %>%
   mutate(asset = factor(asset, levels = c("Tangency", "GMV", "kospi"))) %>%
   ggplot(aes(x = time, y = logret, group = asset, col = asset)) +
@@ -185,4 +185,4 @@ outsamp_cumret_plot <-
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 
-ggsave("../tmp/out-plot.png", outsamp_cumret_plot, width = 8, height = 5)
+ggsave("../tmp/out-plot.png", test_cumret_plot, width = 8, height = 5)

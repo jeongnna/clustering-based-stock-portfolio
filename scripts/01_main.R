@@ -17,24 +17,24 @@ with_list <- c("return", "market_residual", "factors", "factors_residual")
 n_time_list <- c(6, 8, 10, 12)
 method_list <- c("GMV", "Tangency")
 
-# In-sample
+# Validation period
 start_list <- str_c(c("2002", "2005", "2008", "2011"), "-4")
 end_list <- str_c(c("2005", "2008", "2011", "2014"), "-3")
-insamp_res_list <- list()
+valid_res_list <- list()
 for (i in 1:4) {
   start <- start_list[i]
   end <- end_list[i]
-  insamp_res_list[[i]] <-
+  valid_res_list[[i]] <-
     evaluate_portfolio(stock_df, kospi, risk_free, start, end,
                        with_list, n_time_list, method_list)
 }
 
-# Out-sample
+# Test period
 start <- "2014-4"
 end <- "2017-3"
 outsamp_res <- evaluate_portfolio(stock_df, kospi, risk_free, start, end,
                                   with_list, n_time_list, method_list)
 
 # Save results
-save(insamp_res_list, file = "../model/insamp_res_list.RData")
+save(valid_res_list, file = "../model/valid_res_list.RData")
 save(outsamp_res, file = "../model/outsamp_res.RData")
