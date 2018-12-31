@@ -8,7 +8,7 @@ source("../src/functions-portfolio.R")
 set.seed(123)
 
 # Read data
-stock_tbl <- read_csv("../data/processed/stock_tbl.csv")
+stock_tbl <- read_csv("../data/processed/stock.csv")
 kospi <- read_csv("../data/processed/kospi.csv")
 risk_free <- read_csv("../data/processed/risk_free.csv")
 
