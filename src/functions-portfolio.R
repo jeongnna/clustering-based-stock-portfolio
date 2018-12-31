@@ -61,7 +61,7 @@ evaluate_portfolio <- function(data, market, risk_free, start, end,
   # Model grid
   grd <- expand_grid(with_list, n_time_list, method_list) %>%
     setNames(c("with", "n_time", "method"))
-  model_names <- grd %>% unite(1:3) %>% .[[1]]
+  model_names <- grd %>% unite("name", 1:3) %>% .[[1]]
 
   # Portfolio returns table
   pr_tbl <- kospi %>% slice(timeset + 1) %>% setNames(c("time", "kospi"))
