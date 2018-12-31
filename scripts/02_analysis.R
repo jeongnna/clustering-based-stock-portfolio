@@ -99,7 +99,7 @@ test_summ <-
 
 
 
-# In-sample plot ----------------------------------------------------------
+# Valid plot ----------------------------------------------------------
 
 cumret_plot <- function(x) {
   x %>%
@@ -136,34 +136,34 @@ for (i in 1:4) {
 }
 
 ggsave(
-  "../tmp/in-plot_00.png",
+  "../tmp/valid-plot_00.png",
   valid_cumret_total_plot,
   width = 10, height = 5
 )
 ggsave(
-  "../tmp/in-plot_01.png",
+  "../tmp/valid-plot_01.png",
   valid_cumret_part_plot[[1]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
-  "../tmp/in-plot_02.png",
+  "../tmp/valid-plot_02.png",
   valid_cumret_part_plot[[2]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
-  "../tmp/in-plot_03.png",
+  "../tmp/valid-plot_03.png",
   valid_cumret_part_plot[[3]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
-  "../tmp/in-plot_04.png",
+  "../tmp/valid-plot_04.png",
   valid_cumret_part_plot[[4]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 
 
 
-# Out-sample plot ---------------------------------------------------------
+# Test plot ---------------------------------------------------------
 
 test_ret <-
   test_res$return %>%
@@ -185,4 +185,4 @@ test_cumret_plot <-
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 
-ggsave("../tmp/out-plot.png", test_cumret_plot, width = 8, height = 5)
+ggsave("../tmp/test-plot.png", test_cumret_plot, width = 8, height = 5)

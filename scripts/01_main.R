@@ -32,9 +32,9 @@ for (i in 1:4) {
 # Test period
 start <- "2014-4"
 end <- "2017-3"
-outsamp_res <- evaluate_portfolio(stock_tbl, kospi, risk_free, start, end,
+test_res <- evaluate_portfolio(stock_tbl, kospi, risk_free, start, end,
                                   with_list, n_time_list, method_list)
 
 # Save results
 save(valid_res_list, file = "../model/valid_res_list.RData")
-save(outsamp_res, file = "../model/outsamp_res.RData")
+save(test_res, file = "../model/test_res.RData")
