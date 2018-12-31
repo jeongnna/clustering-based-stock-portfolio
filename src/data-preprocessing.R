@@ -130,18 +130,10 @@ preprocess <- function(path, file_names, var_names, extention = ".xls") {
                   equity_turnover = equity_turnover,
                   volatility = volatility,
                   logret = c(NA, diff(log(price))))
-    stock_tbl <-
-        data %>%
+    
+    data %>%
         select(code, time) %>%
         bind_cols(features)
-
-    # Create stock attributes table
-    stock_attr <-
-        data %>%
-        select(code, name) %>%
-        distinct()
-
-    list(data = stock_tbl, attr = stock_attr)
 }
 
 
@@ -152,19 +144,11 @@ file_names <- c("Leverage", "NetProfit", "Equity",
                 "Asset", "AssetGrowth", "Trade_Amount",
                 "PCR", "PER", "StockPrice", "Stock_Number",
                 "MarketCap", "EquityTurnover", "Volatility")
-
 var_names <- c("leverage", "net_profit", "equity",
                "asset", "asset_growth", "trade_amount",
                "pcr", "per", "price", "stock_num",
                "market_cap", "equity_turnover", "volatility")
-
-ppc <- preprocess("../data/raw/", file_names, var_names)
-
-stock_tbl <- ppc[["data"]]
-stock_attr <- ppc[["attr"]]
-
-rm(ppc)
-
+stock_tbl <- preprocess(path = "../data/raw/", file_names, var_names)
 
 # KOSPI index
 kospi <-
@@ -176,7 +160,6 @@ kospi <-
     transmute(time = str_c(.[[1]], .[[2]], sep = "-"),
               logret = c(NA, diff(log(price))))
 
-
 # Risk-free rate
 risk_free <-
     read_excel("../data/raw/CD_RiskFree.xlsx") %>%
@@ -185,7 +168,6 @@ risk_free <-
            time = time %>%
                str_extract("[:digit:]+/[:digit:]") %>%
                str_replace("/", "-"))
-
 
 # Save processed data
 write.csv(stock_tbl, "../data/processed/stock.csv", row.names=FALSE)
