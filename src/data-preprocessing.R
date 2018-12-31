@@ -151,22 +151,25 @@ stock_tbl <- preprocess(path, file_names, var_names)
 
 # KOSPI index
 kospi <-
-    read_excel("../data/raw/KOSPI_index.xlsx", col_names = FALSE) %>%
+    read_excel("../data/raw/kospi-index.xlsx", col_names = FALSE) %>%
     setNames(c("time", "price")) %>%
     group_by(year(time), as_quarter(month(time))) %>%
     summarize(price = mean(price, na.rm = TRUE)) %>%
     ungroup() %>%
     transmute(time = str_c(.[[1]], .[[2]], sep = "-"),
-              logret = c(NA, diff(log(price))))
+              logret = c(NA, diff(log(price)))
+    )
 
 # Risk-free rate
 risk_free <-
-    read_excel("../data/raw/CD_RiskFree.xlsx") %>%
+    read_excel("../data/raw/cd-risk-free.xlsx") %>%
     setNames(c("time", "r")) %>%
-    mutate(r = log(1 + r/100),
-           time = time %>%
+    mutate(r = log(1 + r / 100),
+           time = 
+               time %>%
                str_extract("[:digit:]+/[:digit:]") %>%
-               str_replace("/", "-"))
+               str_replace("/", "-")
+    )
 
 # Save processed data
 write.csv(stock_tbl, "../data/processed/stock.csv", row.names = FALSE)
