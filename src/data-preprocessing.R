@@ -180,13 +180,14 @@ var_names <- c("leverage", "net_profit", "equity",
                "market_cap", "equity_turnover", "volatility")
 
 ppc <- preprocess("../data/raw/", file_names, var_names)
-ppc_2018 <- preprocess("../data/raw/data2018/", str_c(file_names, "_2018"), var_names)
-ppc <- merge_time(ppc, ppc_2018)
+# ppc_2018 <- preprocess("../data/raw/data2018/", str_c(file_names, "_2018"), var_names)
+# ppc <- merge_time(ppc, ppc_2018)
 
 stock_tbl <- ppc[["data"]]
 stock_attr <- ppc[["attr"]]
 
-rm(list = c("ppc", "ppc_2018"))
+# rm(list = c("ppc", "ppc_2018"))
+rm(ppc)
 
 
 # KOSPI index
@@ -198,6 +199,9 @@ kospi <-
     ungroup() %>%
     transmute(time = str_c(.[[1]], .[[2]], sep = "-"),
               logret = c(NA, diff(log(price))))
+kospi <- 
+    kospi %>% 
+    filter(!time %in% str_c("2018", 1:4, sep = "-"))
 
 
 # Risk-free rate
@@ -208,6 +212,9 @@ risk_free <-
            time = time %>%
                str_extract("[:digit:]+/[:digit:]") %>%
                str_replace("/", "-"))
+risk_free <- 
+    risk_free %>% 
+    filter(!time %in% str_c("2018", 1:4, sep = "-"))
 
 
 # Save processed data
