@@ -144,27 +144,6 @@ preprocess <- function(path, file_names, var_names, extention = ".xls") {
     list(data = stock_tbl, attr = stock_attr)
 }
 
-merge_time <- function(ppc1, ppc2) {
-
-    # Merge data
-    data1 <- ppc1[["data"]]
-    data2 <- ppc2[["data"]]
-
-    data1 <- semi_join(data1, data2, by = "code")
-    data2 <- semi_join(data2, data1, by = "code")
-
-    data1 <-
-        data1 %>%
-        bind_rows(data2) %>%
-        arrange(code, time)
-
-    # Merge attr
-    attr1 <- ppc1[["attr"]]
-    attr1 <- semi_join(attr1, data2, by = "code")
-
-    return (list(data = data1, attr = attr1))
-}
-
 
 # Data preprocessing ------------------------------------------------------
 
@@ -180,13 +159,10 @@ var_names <- c("leverage", "net_profit", "equity",
                "market_cap", "equity_turnover", "volatility")
 
 ppc <- preprocess("../data/raw/", file_names, var_names)
-# ppc_2018 <- preprocess("../data/raw/data2018/", str_c(file_names, "_2018"), var_names)
-# ppc <- merge_time(ppc, ppc_2018)
 
 stock_tbl <- ppc[["data"]]
 stock_attr <- ppc[["attr"]]
 
-# rm(list = c("ppc", "ppc_2018"))
 rm(ppc)
 
 
