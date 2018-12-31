@@ -130,7 +130,7 @@ preprocess <- function(path, file_names, var_names, extention = ".xls") {
                   equity_turnover = equity_turnover,
                   volatility = volatility,
                   logret = c(NA, diff(log(price))))
-    stock_df <-
+    stock_tbl <-
         data %>%
         select(code, time) %>%
         bind_cols(features)
@@ -141,7 +141,7 @@ preprocess <- function(path, file_names, var_names, extention = ".xls") {
         select(code, name) %>%
         distinct()
 
-    list(data = stock_df, attr = stock_attr)
+    list(data = stock_tbl, attr = stock_attr)
 }
 
 merge_time <- function(ppc1, ppc2) {
@@ -183,7 +183,7 @@ ppc <- preprocess("../data/raw/", file_names, var_names)
 ppc_2018 <- preprocess("../data/raw/data2018/", str_c(file_names, "_2018"), var_names)
 ppc <- merge_time(ppc, ppc_2018)
 
-stock_df <- ppc[["data"]]
+stock_tbl <- ppc[["data"]]
 stock_attr <- ppc[["attr"]]
 
 rm(list = c("ppc", "ppc_2018"))
@@ -211,6 +211,6 @@ risk_free <-
 
 
 # Save processed data
-write.csv(stock_df, "../data/processed/stock_df.csv", row.names=FALSE)
+write.csv(stock_tbl, "../data/processed/stock_tbl.csv", row.names=FALSE)
 write.csv(kospi, "../data/processed/kospi.csv", row.names=FALSE)
 write.csv(risk_free, "../data/processed/risk_free.csv", row.names=FALSE)

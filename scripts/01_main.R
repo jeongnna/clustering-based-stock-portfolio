@@ -8,7 +8,7 @@ source("../src/functions-portfolio.R")
 set.seed(123)
 
 # Read data
-stock_df <- read_csv("../data/processed/stock_df.csv")
+stock_tbl <- read_csv("../data/processed/stock_tbl.csv")
 kospi <- read_csv("../data/processed/kospi.csv")
 risk_free <- read_csv("../data/processed/risk_free.csv")
 
@@ -25,14 +25,14 @@ for (i in 1:4) {
   start <- start_list[i]
   end <- end_list[i]
   valid_res_list[[i]] <-
-    evaluate_portfolio(stock_df, kospi, risk_free, start, end,
+    evaluate_portfolio(stock_tbl, kospi, risk_free, start, end,
                        with_list, n_time_list, method_list)
 }
 
 # Test period
 start <- "2014-4"
 end <- "2017-3"
-outsamp_res <- evaluate_portfolio(stock_df, kospi, risk_free, start, end,
+outsamp_res <- evaluate_portfolio(stock_tbl, kospi, risk_free, start, end,
                                   with_list, n_time_list, method_list)
 
 # Save results
