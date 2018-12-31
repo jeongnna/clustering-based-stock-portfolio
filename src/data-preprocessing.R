@@ -175,9 +175,6 @@ kospi <-
     ungroup() %>%
     transmute(time = str_c(.[[1]], .[[2]], sep = "-"),
               logret = c(NA, diff(log(price))))
-kospi <- 
-    kospi %>% 
-    filter(!time %in% str_c("2018", 1:4, sep = "-"))
 
 
 # Risk-free rate
@@ -188,9 +185,6 @@ risk_free <-
            time = time %>%
                str_extract("[:digit:]+/[:digit:]") %>%
                str_replace("/", "-"))
-risk_free <- 
-    risk_free %>% 
-    filter(!time %in% str_c("2018", 1:4, sep = "-"))
 
 
 # Save processed data
