@@ -140,15 +140,14 @@ preprocess <- function(path, file_names, var_names, extention = ".xls") {
 # Data preprocessing ------------------------------------------------------
 
 # Stock data
-file_names <- c("Leverage", "NetProfit", "Equity",
-                "Asset", "AssetGrowth", "Trade_Amount",
-                "PCR", "PER", "StockPrice", "Stock_Number",
-                "MarketCap", "EquityTurnover", "Volatility")
-var_names <- c("leverage", "net_profit", "equity",
-               "asset", "asset_growth", "trade_amount",
-               "pcr", "per", "price", "stock_num",
-               "market_cap", "equity_turnover", "volatility")
-stock_tbl <- preprocess(path = "../data/raw/", file_names, var_names)
+path <- "../data/raw/"
+file_names <- c("asset", "asset-growth", "equity", "equity-turnover",
+	            "leverage", "market-cap", "net-profit", "pcr", "per",
+	            "stock-number", "stock-price", "trade-amount", "volatility")
+var_names <- c("asset", "asset_growth", "equity", "equity_turnover",
+	           "leverage", "market_cap", "net_profit", "pcr", "per",
+	           "stock_num", "price", "trade_amount", "volatility")
+stock_tbl <- preprocess(path, file_names, var_names)
 
 # KOSPI index
 kospi <-
@@ -170,6 +169,6 @@ risk_free <-
                str_replace("/", "-"))
 
 # Save processed data
-write.csv(stock_tbl, "../data/processed/stock.csv", row.names=FALSE)
-write.csv(kospi, "../data/processed/kospi.csv", row.names=FALSE)
-write.csv(risk_free, "../data/processed/risk_free.csv", row.names=FALSE)
+write.csv(stock_tbl, "../data/processed/stock.csv", row.names = FALSE)
+write.csv(kospi, "../data/processed/kospi.csv", row.names = FALSE)
+write.csv(risk_free, "../data/processed/risk_free.csv", row.names = FALSE)
