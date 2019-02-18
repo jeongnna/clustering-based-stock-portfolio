@@ -176,6 +176,6 @@ risk_free <-
   )
 
 # Save processed data
-write.csv(stock_tbl, "../data/processed/stock.csv", row.names = FALSE)
-write.csv(kospi, "../data/processed/kospi.csv", row.names = FALSE)
-write.csv(risk_free, "../data/processed/risk_free.csv", row.names = FALSE)
+write_csv(stock_tbl, "../data/processed/stock.csv")
+write_csv(kospi, "../data/processed/kospi.csv")
+write_csv(risk_free, "../data/processed/risk_free.csv")
