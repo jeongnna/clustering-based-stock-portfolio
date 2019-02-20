@@ -134,7 +134,7 @@ add_market_residual <- function(data, market, risk_free) {
   data
 }
 
-kmeanspp <- function(x, k, iter_max = 100, nstart = 100,
+kmeanspp <- function(x, k, iter_max = 500, nstart = 20,
                      algorithm = c("Hartigan-Wong", "Lloyd", "Forgy",
                                    "MacQueen"), trace = FALSE) {
   n <- nrow(x)
@@ -156,63 +156,43 @@ get_kmeans_tbl <- function(data, ncmin = 2, ncmax = 5) {
     na.omit()
   
   ncs <- ncmin:ncmax
-  dunns <- numeric(length(ncs))
-  kmfit_list <- list()
-  for (i in 1:length(ncs)) {
-    nc <- ncs[i]
-    kmfit <-
-      data %>%
-      select(-(1:2)) %>%
-      kmeanspp(k = nc)
-    kmfit_list <- append(kmfit_list, list(kmfit))
-    dunns[i] <- dunn(Data = data, clusters = kmfit$cluster)
-  }
+  models <- lapply(ncs, function(nc) {kmeanspp(data[-(1:2)], nc)})
+  dunns <- sapply(models, function(object) {dunn(Data = data, clusters = object$cluster)})
+  best_model <- models[[which.max(dunns)]]
   
-  kmfit_best <- kmfit_list[[which.max(dunns)]]
-  
-  cluster_tbl <-
-    data %>%
+  data %>%
     select(code) %>%
     distinct() %>%
-    mutate(cluster = kmfit_best$cluster)
-  
-  return (cluster_tbl)
+    mutate(cluster = best_model$cluster)
 }
 
 kmeans_with <- function(data, with, market, risk_free) {
   if (with == "return") {
-    data <-
-      data %>%
+    data %>%
       select(1:2, logret) %>%
       time_expand()
     
   } else if (with == "market_residual") {
-    data <-
-      data %>%
+    data %>%
       add_market_residual(market, risk_free) %>%
       select(1:2, market_res) %>%
       time_expand()
     
   } else if (with == "factors") {
-    data <-
-      data %>%
+    data %>%
       select(-logret) %>%
       PCA() %>%
       time_expand()
     
   } else if (with == "factors_residual") {
-    data <-
-      data %>%
+    data %>%
       add_factors_residual(risk_free) %>%
       select(1:2, factors_res) %>%
       time_expand()
     
   } else {
-    stop("ERROR: argument 'with' must be one of
-             ('return', 'market_residual', 'factors', 'factors_residual')")
+    stop("ERROR: argument `with` must be one of ('return', 'market_residual', 'factors', 'factors_residual')")
   }
-  
-  get_kmeans_tbl(data)
 }
 
 integrate_return <- function(return, weight) {
@@ -225,14 +205,14 @@ get_cluster_return <- function(data, time_idx, with, market, risk_free) {
     data %>%
     time_slice(time_idx) %>%
     scale_tbl() %>%
-    kmeans_with(with, market, risk_free)
+    kmeans_with(with, market, risk_free) %>%
+    get_kmeans_tbl()
   
   data <-
     data %>%
     left_join(cluster_df, by = "code") %>%
     select(code, time, logret, size, cluster) %>%
     mutate(size = lag(size)) %>%
-    select(code, time, logret, size, cluster) %>%
     na.omit() %>%
     group_by(cluster, time) %>%
     summarize(logret = integrate_return(r = logret, w = size)) %>%
@@ -243,7 +223,7 @@ get_cluster_return <- function(data, time_idx, with, market, risk_free) {
   
   if (nrow(x) == length(time_idx) &
       y[["time"]] == unique(data[["time"]])[last(time_idx) + 1]) {
-    return (list(x = x, y = y))
+    list(x = x, y = y)
   } else {
     stop("ERROR")
   }
