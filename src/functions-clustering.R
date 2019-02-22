@@ -169,26 +169,22 @@ get_kmeans_tbl <- function(data, ncmin = 2, ncmax = 5) {
 kmeans_with <- function(data, with, market, risk_free) {
   if (with == "return") {
     data %>%
-      select(1:2, logret) %>%
-      time_expand()
+      select(1:2, logret)
     
   } else if (with == "market_residual") {
     data %>%
       add_market_residual(market, risk_free) %>%
-      select(1:2, market_res) %>%
-      time_expand()
+      select(1:2, market_res)
     
   } else if (with == "factors") {
     data %>%
       select(-logret) %>%
-      PCA() %>%
-      time_expand()
+      PCA()
     
   } else if (with == "factors_residual") {
     data %>%
       add_factors_residual(risk_free) %>%
-      select(1:2, factors_res) %>%
-      time_expand()
+      select(1:2, factors_res)
     
   } else {
     stop("ERROR: argument `with` must be one of ('return', 'market_residual', 'factors', 'factors_residual')")
@@ -206,6 +202,7 @@ get_cluster_return <- function(data, time_idx, with, market, risk_free) {
     time_slice(time_idx) %>%
     scale_tbl() %>%
     kmeans_with(with, market, risk_free) %>%
+    time_expand() %>%
     get_kmeans_tbl()
   
   data <-
