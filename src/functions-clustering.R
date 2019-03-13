@@ -8,9 +8,8 @@ time_slice <- function(data, time_idx) {
     ungroup()
 }
 
+
 time_expand <- function(data, skip = 1:2) {
-  # 그냥 spread 쓰면 안 돼?
-  
   cols <- setdiff(1:ncol(data), skip)
   
   while (length(unique(data[["time"]])) > 1) {
@@ -31,6 +30,7 @@ time_expand <- function(data, skip = 1:2) {
   data
 }
 
+
 scale_tbl <- function(data, skip = 1:2) {
   # 데이터의 각 변수들을 표준화한다.
   #
@@ -47,6 +47,7 @@ scale_tbl <- function(data, skip = 1:2) {
   }
   bind_cols(data[skip], vals)
 }
+
 
 PCA <- function(data, skip = 1:2, threshold = 0.8) {
   # 데이터에 PCA(주성분분석)을 수행한다.
@@ -74,6 +75,7 @@ PCA <- function(data, skip = 1:2, threshold = 0.8) {
   
   bind_cols(data[1:2], as_tibble(x_pc))
 }
+
 
 add_factors_residual <- function(data, risk_free) {
   risk_free <-
@@ -103,6 +105,7 @@ add_factors_residual <- function(data, risk_free) {
     slice(-n_time) %>%
     ungroup()
 }
+
 
 add_market_residual <- function(data, market, risk_free) {
   market <-
@@ -134,6 +137,7 @@ add_market_residual <- function(data, market, risk_free) {
   data
 }
 
+
 kmeanspp <- function(x, k, iter_max = 500, nstart = 20,
                      algorithm = c("Hartigan-Wong", "Lloyd", "Forgy",
                                    "MacQueen"), trace = FALSE) {
@@ -150,6 +154,7 @@ kmeanspp <- function(x, k, iter_max = 500, nstart = 20,
   kmeans(x, x[centers, ], iter_max, nstart, algorithm, trace)
 }
 
+
 get_kmeans_tbl <- function(data, ncmin = 2, ncmax = 5) {
   data <-
     data %>%
@@ -165,6 +170,7 @@ get_kmeans_tbl <- function(data, ncmin = 2, ncmax = 5) {
     distinct() %>%
     mutate(cluster = best_model$cluster)
 }
+
 
 kmeans_with <- function(data, with, market, risk_free) {
   if (with == "return") {
@@ -191,10 +197,12 @@ kmeans_with <- function(data, with, market, risk_free) {
   }
 }
 
+
 integrate_return <- function(return, weight) {
   weight <- weight / sum(weight)
   log(sum(weight * exp(return)))
 }
+
 
 get_cluster_return <- function(data, time_idx, with, market, risk_free) {
   cluster_df <-

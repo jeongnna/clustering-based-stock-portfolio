@@ -1,5 +1,4 @@
 library(quadprog)  # solve.QP()
-library(parallel)  # mcmapply()
 
 
 get_weight <-function(x, method = c("GMV", "Tangency"), risk_free = NULL) {
@@ -22,6 +21,7 @@ get_weight <-function(x, method = c("GMV", "Tangency"), risk_free = NULL) {
   qp$solution
 }
 
+
 get_portfolio_return <- function(data, timeset, n_time, with, method,
                                  market, risk_free, seed = 123) {
   p_return <- numeric(length(timeset))
@@ -40,6 +40,7 @@ get_portfolio_return <- function(data, timeset, n_time, with, method,
   p_return
 }
 
+
 expand_grid <- function(...) {
   grd <- expand.grid(...) %>%
     as_tibble()
@@ -53,6 +54,7 @@ expand_grid <- function(...) {
   ex <- parse(text = text)
   eval(ex)
 }
+
 
 evaluate_portfolio <- function(data, market, risk_free, start, end,
                                with_list, n_time_list, method_list, seed) {

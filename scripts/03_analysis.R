@@ -1,10 +1,10 @@
 library(tidyverse)
 
-load("../model/valid_res_list.RData")
-load("../model/test_res.RData")
 
-kospi <- read_csv("../data/processed/kospi.csv")
+load("outputs/valid_res_list.RData")
+load("outputs/test_res.RData")
 
+kospi <- read_csv("data/processed/kospi.csv")
 
 
 # Summary -----------------------------------------------------------------
@@ -37,7 +37,7 @@ sd_summ <- t(sd_summ)[3:1, ]
 sd_summ <- cbind(sd_summ, apply(sd_summ, 1, mean))
 colnames(sd_summ) <- c(str_c("Partition ", 1:4), "Average")
 
-write.csv(sd_summ, "../tmp/sd_summ.csv", row.names = TRUE)
+write.csv(sd_summ, "outputs/sd_summ.csv", row.names = TRUE)
 
 
 ##
@@ -97,9 +97,7 @@ test_summ <-
   mutate(rank = min_rank(-info_r))
 
 
-
-
-# Valid plot ----------------------------------------------------------
+# Validation plot ----------------------------------------------------------
 
 cumret_plot <- function(x) {
   x %>%
@@ -136,31 +134,30 @@ for (i in 1:4) {
 }
 
 ggsave(
-  "../tmp/valid-plot_00.png",
+  "outputs/valid-plot_00.png",
   valid_cumret_total_plot,
   width = 10, height = 5
 )
 ggsave(
-  "../tmp/valid-plot_01.png",
+  "outputs/valid-plot_01.png",
   valid_cumret_part_plot[[1]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
-  "../tmp/valid-plot_02.png",
+  "outputs/valid-plot_02.png",
   valid_cumret_part_plot[[2]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
-  "../tmp/valid-plot_03.png",
+  "outputs/valid-plot_03.png",
   valid_cumret_part_plot[[3]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
 ggsave(
-  "../tmp/valid-plot_04.png",
+  "outputs/valid-plot_04.png",
   valid_cumret_part_plot[[4]] + ylim(-0.2, 1),
   width = 8, height = 5
 )
-
 
 
 # Test plot ---------------------------------------------------------
@@ -185,4 +182,4 @@ test_cumret_plot <-
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 
-ggsave("../tmp/test-plot.png", test_cumret_plot, width = 8, height = 5)
+ggsave("outputs/test-plot.png", test_cumret_plot, width = 8, height = 5)
